@@ -97,10 +97,11 @@ async def login_page(request: Request, error: str = ""):
     # If already logged in, redirect to dashboard
     if request.session.get("user"):
         return RedirectResponse("/", status_code=302)
-    return templates.TemplateResponse("login.html", {
-        "request": request,
-        "error": error,
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={"error": error},
+    )
 
 
 @app.post("/login")
@@ -117,10 +118,11 @@ async def login_submit(
         request.session["user"] = username
         request.session["login_time"] = datetime.now().isoformat()
         return RedirectResponse("/", status_code=302)
-    return templates.TemplateResponse("login.html", {
-        "request": request,
-        "error": "Invalid username or password",
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="login.html",
+        context={"error": "Invalid username or password"},
+    )
 
 
 @app.get("/logout")
@@ -138,11 +140,14 @@ async def dashboard_page(request: Request):
     user = request.session.get("user")
     if not user:
         return RedirectResponse("/login", status_code=302)
-    return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "user": user,
-        "server_url": SERVER_URL,
-    })
+    return templates.TemplateResponse(
+        request=request,
+        name="dashboard.html",
+        context={
+            "user": user,
+            "server_url": SERVER_URL,
+        },
+    )
 
 
 # ─── Log File Helpers ────────────────────────────────────────────────────────
