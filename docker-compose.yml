@@ -1,0 +1,26 @@
+services:
+  watcher:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: onfood-server-watcher:latest
+    container_name: onfood-server-watcher
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      - SERVER_URL=http://host.docker.internal:8000
+      - LOG_DIRECTORY=/logs
+      - ADMIN_USERNAME=karthiksupport
+      - ADMIN_PASSWORD=karthik@6
+      - SECRET_KEY=onfood-watcher-secret-change-in-production
+    volumes:
+      - ../onfoodserver/logs:/logs:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/login"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

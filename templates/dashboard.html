@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OnFood Server Watcher</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        gray: {
+                            850: '#1f2937',
+                            900: '#111827',
+                            950: '#030712',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar for logs */
+        .log-viewer::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        .log-viewer::-webkit-scrollbar-track {
+            background: #111827; 
+        }
+        .log-viewer::-webkit-scrollbar-thumb {
+            background: #374151; 
+            border-radius: 4px;
+        }
+        .log-viewer::-webkit-scrollbar-thumb:hover {
+            background: #4b5563; 
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-gray-200 min-h-screen flex font-sans antialiased">
+
+    <!-- Sidebar -->
+    <aside class="w-64 bg-gray-900 border-r border-gray-800 flex-shrink-0 flex flex-col hidden md:flex">
+        <div class="h-16 flex items-center px-6 border-b border-gray-800">
+            <span class="text-xl font-bold text-white tracking-wider">OnFood Watcher</span>
+        </div>
+        <nav class="flex-1 px-4 py-6 space-y-2">
+            <a href="#" onclick="switchTab('dashboard')" id="nav-dashboard" class="nav-item flex items-center gap-3 px-4 py-3 bg-gray-800 text-white rounded-lg transition-colors">
+                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                Dashboard
+            </a>
+            <a href="#" onclick="switchTab('logs')" id="nav-logs" class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
+                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                Logs
+            </a>
+            <a href="#" onclick="switchTab('downloads')" id="nav-downloads" class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
+                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                Downloads
+            </a>
+            <a href="#" onclick="switchTab('settings')" id="nav-settings" class="nav-item flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors">
+                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                Settings
+            </a>
+        </nav>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <!-- Header -->
+        <header class="h-16 bg-gray-900 border-b border-gray-800 flex items-center justify-between px-6 flex-shrink-0">
+            <div class="flex items-center gap-4">
+                <button class="md:hidden text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                </button>
+                <div class="flex items-center gap-3">
+                    <div id="server-status-dot" class="w-3 h-3 rounded-full bg-gray-500 shadow-[0_0_8px_rgba(107,114,128,0.5)]"></div>
+                    <span id="server-status-text" class="text-sm font-medium text-gray-400 uppercase tracking-wider">Checking...</span>
+                </div>
+            </div>
+            
+            <a href="/logout" class="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-sm font-medium text-white rounded-lg transition-colors border border-gray-700">
+                Logout
+            </a>
+        </header>
+
+        <!-- Scrollable Content Area -->
+        <div class="flex-1 overflow-auto p-6">
+            
+            <!-- Dashboard Section -->
+            <div id="section-dashboard" class="space-y-6 block">
+                <!-- Stats Row -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <!-- Total Requests -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-gray-400 text-sm font-medium">Total Requests</h3>
+                            <div class="p-2 bg-indigo-500/10 rounded-lg">
+                                <svg class="w-5 h-5 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
+                            </div>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="stat-total-requests" class="text-3xl font-bold text-white">0</span>
+                            <span id="stat-requests-trend" class="text-xs font-medium text-emerald-400 flex items-center">
+                                <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>
+                                0/min
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Avg Latency -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-gray-400 text-sm font-medium">Avg Latency</h3>
+                            <div class="p-2 bg-emerald-500/10 rounded-lg">
+                                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            </div>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="stat-avg-latency" class="text-3xl font-bold text-white">0</span>
+                            <span class="text-sm text-gray-500 font-medium">ms</span>
+                        </div>
+                    </div>
+
+                    <!-- Memory Usage -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-gray-400 text-sm font-medium">Memory Usage</h3>
+                            <div class="p-2 bg-purple-500/10 rounded-lg">
+                                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"></path></svg>
+                            </div>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="stat-memory" class="text-3xl font-bold text-white">0</span>
+                            <span class="text-sm text-gray-500 font-medium">MB</span>
+                        </div>
+                    </div>
+
+                    <!-- Active Connections -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 shadow-sm">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-gray-400 text-sm font-medium">Active In-flight</h3>
+                            <div class="p-2 bg-blue-500/10 rounded-lg">
+                                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            </div>
+                        </div>
+                        <div class="flex items-baseline gap-2">
+                            <span id="stat-inflight" class="text-3xl font-bold text-white">0</span>
+                            <span class="text-sm text-gray-500 font-medium">reqs</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Connections & Online Users Panel -->
+                <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden shadow-sm">
+                    <div class="p-5 border-b border-gray-800 flex flex-wrap justify-between items-center bg-gray-900 gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2.5 bg-emerald-500/10 rounded-lg border border-emerald-500/20 text-emerald-400">
+                                <svg class="w-5 h-5 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                            </div>
+                            <div>
+                                <h3 class="text-white font-semibold flex items-center gap-2">
+                                    Live Connections & Online Users
+                                    <span id="badge-live-total" class="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">0 Active</span>
+                                </h3>
+                                <p class="text-xs text-gray-400">Real-time WebSocket & SSE stream connections and active users</p>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-4 text-xs">
+                            <span class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800/80 rounded-lg border border-gray-700/50">
+                                <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 inline-block animate-ping"></span>
+                                <span class="text-gray-400">WebSockets:</span> <strong id="val-ws-count" class="text-emerald-400 text-sm">0</strong>
+                            </span>
+                            <span class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800/80 rounded-lg border border-gray-700/50">
+                                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 inline-block"></span>
+                                <span class="text-gray-400">SSE Streams:</span> <strong id="val-sse-count" class="text-cyan-400 text-sm">0</strong>
+                            </span>
+                            <span class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-800/80 rounded-lg border border-gray-700/50">
+                                <span class="w-2.5 h-2.5 rounded-full bg-indigo-400 inline-block"></span>
+                                <span class="text-gray-400">Active (15m):</span> <strong id="val-http-users-count" class="text-indigo-400 text-sm">0</strong>
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Online Users Table -->
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-gray-400 uppercase bg-gray-800/50">
+                                <tr>
+                                    <th class="px-5 py-3">User ID</th>
+                                    <th class="px-5 py-3">Type</th>
+                                    <th class="px-5 py-3">Sockets</th>
+                                    <th class="px-5 py-3">Client IP</th>
+                                    <th class="px-5 py-3">Connected / Active</th>
+                                    <th class="px-5 py-3">Device / User Agent</th>
+                                    <th class="px-5 py-3 text-right">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-online-users" class="divide-y divide-gray-800 font-sans">
+                                <tr>
+                                    <td colspan="7" class="px-6 py-8 text-center text-gray-500 text-sm">Connecting to server...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Tables Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Recent Requests -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl flex flex-col overflow-hidden">
+                        <div class="p-5 border-b border-gray-800 flex justify-between items-center bg-gray-900">
+                            <h3 class="text-white font-semibold">Recent Requests</h3>
+                        </div>
+                        <div class="overflow-x-auto flex-1">
+                            <table class="w-full text-sm text-left">
+                                <thead class="text-xs text-gray-400 uppercase bg-gray-800/50">
+                                    <tr>
+                                        <th class="px-4 py-3">Time</th>
+                                        <th class="px-4 py-3">Method</th>
+                                        <th class="px-4 py-3">Path</th>
+                                        <th class="px-4 py-3">Status</th>
+                                        <th class="px-4 py-3">Duration</th>
+                                        <th class="px-4 py-3">IP</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-recent-requests" class="divide-y divide-gray-800/50">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Recent Errors -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl flex flex-col overflow-hidden">
+                        <div class="p-5 border-b border-gray-800 flex justify-between items-center bg-gray-900">
+                            <h3 class="text-white font-semibold">Recent Errors</h3>
+                            <span id="error-badge" class="px-2.5 py-1 bg-red-500/10 text-red-400 text-xs font-medium rounded-full">0 in 5m</span>
+                        </div>
+                        <div class="overflow-x-auto flex-1">
+                            <table class="w-full text-sm text-left">
+                                <thead class="text-xs text-gray-400 uppercase bg-gray-800/50">
+                                    <tr>
+                                        <th class="px-4 py-3">Time</th>
+                                        <th class="px-4 py-3">Path</th>
+                                        <th class="px-4 py-3">Error Type</th>
+                                        <th class="px-4 py-3">Message</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="table-recent-errors" class="divide-y divide-gray-800/50">
+                                    <!-- Populated by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Analysis Row -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Top Endpoints -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                        <div class="p-5 border-b border-gray-800 bg-gray-900">
+                            <h3 class="text-white font-semibold">Top Endpoints (Volume)</h3>
+                        </div>
+                        <div class="p-5 space-y-4" id="list-top-endpoints">
+                            <!-- Populated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- System Resources -->
+                    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden flex flex-col">
+                        <div class="p-5 border-b border-gray-800 bg-gray-900">
+                            <h3 class="text-white font-semibold">System Resources</h3>
+                        </div>
+                        <div class="p-6 flex-1 flex flex-col justify-center space-y-8">
+                            <!-- CPU -->
+                            <div>
+                                <div class="flex justify-between items-end mb-2">
+                                    <span class="text-sm font-medium text-gray-300">CPU Usage</span>
+                                    <span id="bar-cpu-text" class="text-sm font-bold text-white">0%</span>
+                                </div>
+                                <div class="w-full bg-gray-800 rounded-full h-2.5">
+                                    <div id="bar-cpu-fill" class="bg-indigo-500 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Memory -->
+                            <div>
+                                <div class="flex justify-between items-end mb-2">
+                                    <span class="text-sm font-medium text-gray-300">Memory RSS</span>
+                                    <span id="bar-mem-text" class="text-sm font-bold text-white">0 MB</span>
+                                </div>
+                                <div class="w-full bg-gray-800 rounded-full h-2.5">
+                                    <div id="bar-mem-fill" class="bg-purple-500 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            <!-- P99 Latency -->
+                            <div>
+                                <div class="flex justify-between items-end mb-2">
+                                    <span class="text-sm font-medium text-gray-300">P99 Latency</span>
+                                    <span id="bar-p99-text" class="text-sm font-bold text-white">0 ms</span>
+                                </div>
+                                <div class="w-full bg-gray-800 rounded-full h-2.5 relative">
+                                    <div id="bar-p99-fill" class="bg-emerald-500 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs Section -->
+            <div id="section-logs" class="hidden h-full flex flex-col min-h-[600px]">
+                <div class="flex justify-between items-center mb-4">
+                    <div class="flex bg-gray-900 border border-gray-800 rounded-lg p-1 gap-1" id="log-tabs">
+                        <button onclick="selectLogTab('behavior.log')" id="tab-behavior.log" class="px-4 py-2 text-sm font-medium rounded-md bg-gray-800 text-white shadow-sm transition-all">behavior.log</button>
+                        <button onclick="selectLogTab('request.log')" id="tab-request.log" class="px-4 py-2 text-sm font-medium rounded-md text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all">request.log</button>
+                        <button onclick="selectLogTab('response.log')" id="tab-response.log" class="px-4 py-2 text-sm font-medium rounded-md text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all">response.log</button>
+                        <button onclick="selectLogTab('errors.log')" id="tab-errors.log" class="px-4 py-2 text-sm font-medium rounded-md text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all">errors.log</button>
+                    </div>
+                    <button onclick="fetchLogs()" class="flex items-center gap-2 px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm border border-gray-700 transition-colors">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                        Refresh
+                    </button>
+                </div>
+                <div class="flex-1 bg-[#0a0a0a] border border-gray-800 rounded-xl p-4 font-mono text-sm overflow-hidden flex flex-col shadow-inner">
+                    <div id="log-viewer" class="log-viewer flex-1 overflow-y-auto text-gray-300 space-y-1.5 whitespace-pre-wrap break-all pb-4">
+                        <div class="text-gray-500 italic">Select a log file and wait for data...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Downloads Section -->
+            <div id="section-downloads" class="hidden space-y-6">
+                <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+                    <div class="p-5 border-b border-gray-800 flex justify-between items-center bg-gray-900">
+                        <h3 class="text-white font-semibold">Available Log Files</h3>
+                        <span class="text-sm text-gray-400">Click to download</span>
+                    </div>
+                    <div class="p-0">
+                        <table class="w-full text-sm text-left">
+                            <thead class="text-xs text-gray-400 uppercase bg-gray-800/50">
+                                <tr>
+                                    <th class="px-6 py-4">File Name</th>
+                                    <th class="px-6 py-4">Size</th>
+                                    <th class="px-6 py-4">Last Modified</th>
+                                    <th class="px-6 py-4 text-right">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-downloads" class="divide-y divide-gray-800/50">
+                                <!-- Populated by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Settings Section -->
+            <div id="section-settings" class="hidden space-y-6">
+                <div class="bg-gray-900 border border-gray-800 rounded-xl p-6 max-w-2xl">
+                    <h3 class="text-white font-semibold mb-4">Dashboard Settings</h3>
+                    <div class="space-y-4">
+                        <div class="flex items-center justify-between py-3 border-b border-gray-800">
+                            <div>
+                                <p class="text-gray-200 font-medium">Auto-refresh Dashboard</p>
+                                <p class="text-gray-500 text-sm">Poll server for stats every 5 seconds</p>
+                            </div>
+                            <label class="relative inline-flex items-center cursor-pointer">
+                                <input type="checkbox" checked class="sr-only peer" id="toggle-refresh">
+                                <div class="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-500"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // --- Navigation ---
+        const sections = ['dashboard', 'logs', 'downloads', 'settings'];
+        function switchTab(tabId) {
+            sections.forEach(id => {
+                document.getElementById('section-' + id).classList.add('hidden');
+                document.getElementById('section-' + id).classList.remove('block');
+                
+                const navItem = document.getElementById('nav-' + id);
+                if (id === tabId) {
+                    navItem.className = 'nav-item flex items-center gap-3 px-4 py-3 bg-gray-800 text-white rounded-lg transition-colors';
+                } else {
+                    navItem.className = 'nav-item flex items-center gap-3 px-4 py-3 text-gray-400 hover:text-white hover:bg-gray-800 rounded-lg transition-colors';
+                }
+            });
+            
+            document.getElementById('section-' + tabId).classList.remove('hidden');
+            if (tabId === 'dashboard') {
+                document.getElementById('section-' + tabId).classList.add('block');
+            } else {
+                document.getElementById('section-' + tabId).classList.add('flex'); // For logs min-height
+            }
+            
+            if (tabId === 'logs' && currentLogTab) {
+                fetchLogs();
+            }
+        }
+
+        // --- Utils ---
+        function getMethodColor(method) {
+            const m = method.toUpperCase();
+            if(m === 'GET') return 'bg-blue-500/10 text-blue-400';
+            if(m === 'POST') return 'bg-emerald-500/10 text-emerald-400';
+            if(m === 'PUT') return 'bg-amber-500/10 text-amber-400';
+            if(m === 'DELETE') return 'bg-red-500/10 text-red-400';
+            return 'bg-gray-500/10 text-gray-400';
+        }
+
+        function getStatusColor(status) {
+            if(status >= 200 && status < 300) return 'bg-emerald-500/10 text-emerald-400';
+            if(status >= 400 && status < 500) return 'bg-amber-500/10 text-amber-400';
+            if(status >= 500) return 'bg-red-500/10 text-red-400';
+            return 'bg-gray-500/10 text-gray-400';
+        }
+
+        function escapeHTML(str) {
+            if(!str) return '';
+            return String(str).replace(/[&<>'"]/g, 
+                tag => ({
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    "'": '&#39;',
+                    '"': '&quot;'
+                }[tag] || tag)
+            );
+        }
+
+        // --- Fetching Logic ---
+        let autoRefreshEnabled = true;
+        
+        document.getElementById('toggle-refresh').addEventListener('change', (e) => {
+            autoRefreshEnabled = e.target.checked;
+        });
+
+        async function fetchStats() {
+            if (!autoRefreshEnabled && document.visibilityState === 'visible') return;
+            try {
+                const res = await fetch('/api/stats', { credentials: 'same-origin' });
+                if (res.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
+                if (!res.ok) throw new Error('Network err');
+                
+                const data = await res.json();
+                updateDashboard(data);
+                updateDownloads(data.log_files);
+                
+                // Update header status dot
+                const dot = document.getElementById('server-status-dot');
+                const st = document.getElementById('server-status-text');
+                if(data.server_status === 'up') {
+                    dot.className = 'w-3 h-3 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)] animate-pulse';
+                    const ping = data.server_response_ms ? `${data.server_response_ms.toFixed(1)}ms` : 'active';
+                    st.textContent = `Online (${ping})`;
+                    st.className = 'text-sm font-bold text-emerald-400 tracking-wide';
+                } else {
+                    dot.className = 'w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]';
+                    st.textContent = 'Offline';
+                    st.className = 'text-sm font-bold text-red-500 uppercase tracking-wider';
+                }
+
+            } catch(e) {
+                console.error(e);
+                const dot = document.getElementById('server-status-dot');
+                const st = document.getElementById('server-status-text');
+                dot.className = 'w-3 h-3 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]';
+                st.textContent = 'Error';
+                st.className = 'text-sm font-bold text-red-500 uppercase tracking-wider';
+            }
+        }
+
+        function updateDashboard(data) {
+            // Stats
+            document.getElementById('stat-total-requests').textContent = (data.total_requests || 0).toLocaleString();
+            document.getElementById('stat-requests-trend').innerHTML = `<svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 10l7-7m0 0l7 7m-7-7v18"></path></svg>${data.requests_1m || 0}/min`;
+            
+            document.getElementById('stat-avg-latency').textContent = (data.avg_latency_ms || 0).toFixed(1);
+            document.getElementById('stat-memory').textContent = (data.memory_rss_mb || 0).toFixed(1);
+            document.getElementById('stat-inflight').textContent = (data.in_flight || 0);
+
+            // Live Online Users & WebSockets
+            const wsTotal = (data.websockets && data.websockets.total_connections) || 0;
+            const wsUsers = (data.websockets && data.websockets.users) || [];
+            const sseTotal = (data.sse && data.sse.total_connections) || 0;
+            const sseUsers = (data.sse && data.sse.users) || [];
+            const httpUsers = data.http_active_users || [];
+
+            document.getElementById('badge-live-total').textContent = `${wsTotal + sseTotal} Active`;
+            document.getElementById('val-ws-count').textContent = wsTotal;
+            document.getElementById('val-sse-count').textContent = sseTotal;
+            document.getElementById('val-http-users-count').textContent = httpUsers.length;
+
+            const usersTbody = document.getElementById('table-online-users');
+            const allRows = [];
+
+            // 1. WebSocket Connected Users
+            wsUsers.forEach(u => {
+                allRows.push(`
+                    <tr class="hover:bg-gray-800/50 transition-colors bg-emerald-950/10">
+                        <td class="px-5 py-3 font-mono font-semibold text-emerald-400 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping inline-block"></span>
+                            <span class="truncate max-w-[180px]" title="${escapeHTML(u.user_id)}">${escapeHTML(u.user_id)}</span>
+                        </td>
+                        <td class="px-5 py-3"><span class="px-2.5 py-0.5 rounded text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">WebSocket</span></td>
+                        <td class="px-5 py-3 text-gray-200 font-semibold">${u.connections_count} socket</td>
+                        <td class="px-5 py-3 text-gray-300 font-mono text-xs">${escapeHTML(u.client_ip || '-')}</td>
+                        <td class="px-5 py-3 text-gray-300 text-xs">${u.duration_seconds}s active</td>
+                        <td class="px-5 py-3 text-gray-400 text-xs truncate max-w-[200px]" title="${escapeHTML(u.user_agent || '')}">${escapeHTML(u.user_agent || 'OkHttp / App')}</td>
+                        <td class="px-5 py-3 text-right"><span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">🟢 LIVE</span></td>
+                    </tr>
+                `);
+            });
+
+            // 2. SSE Stream Users
+            sseUsers.forEach(u => {
+                allRows.push(`
+                    <tr class="hover:bg-gray-800/50 transition-colors bg-cyan-950/10">
+                        <td class="px-5 py-3 font-mono font-semibold text-cyan-400 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-cyan-400 inline-block"></span>
+                            <span class="truncate max-w-[180px]" title="${escapeHTML(u.user_id)}">${escapeHTML(u.user_id)}</span>
+                        </td>
+                        <td class="px-5 py-3"><span class="px-2.5 py-0.5 rounded text-xs font-semibold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">SSE Stream</span></td>
+                        <td class="px-5 py-3 text-gray-200 font-semibold">${u.connections_count} stream</td>
+                        <td class="px-5 py-3 text-gray-300 font-mono text-xs">${escapeHTML(u.client_ip || '-')}</td>
+                        <td class="px-5 py-3 text-gray-300 text-xs">${u.duration_seconds}s active</td>
+                        <td class="px-5 py-3 text-gray-400 text-xs">EventSource Client</td>
+                        <td class="px-5 py-3 text-right"><span class="px-2.5 py-1 rounded-full text-xs font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">📡 STREAM</span></td>
+                    </tr>
+                `);
+            });
+
+            // 3. Recently Active HTTP Users (Last 15m)
+            httpUsers.forEach(u => {
+                allRows.push(`
+                    <tr class="hover:bg-gray-800/50 transition-colors opacity-90">
+                        <td class="px-5 py-3 font-mono text-indigo-300 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-indigo-400 inline-block"></span>
+                            <span class="truncate max-w-[180px]" title="${escapeHTML(u.user_id)}">${escapeHTML(u.user_id)}</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">${escapeHTML(u.role)}</span>
+                        </td>
+                        <td class="px-5 py-3"><span class="px-2.5 py-0.5 rounded text-xs font-semibold bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">HTTP Token</span></td>
+                        <td class="px-5 py-3 text-gray-400 text-xs">${escapeHTML(u.last_method)} ${escapeHTML(u.last_path)}</td>
+                        <td class="px-5 py-3 text-gray-300 font-mono text-xs">${escapeHTML(u.client_ip || '-')}</td>
+                        <td class="px-5 py-3 text-gray-400 text-xs">${u.idle_seconds}s ago</td>
+                        <td class="px-5 py-3 text-gray-400 text-xs truncate max-w-[200px]" title="${escapeHTML(u.user_agent || '')}">${escapeHTML(u.user_agent || 'App Client')}</td>
+                        <td class="px-5 py-3 text-right"><span class="px-2.5 py-1 rounded-full text-xs font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">⚡ RECENT</span></td>
+                    </tr>
+                `);
+            });
+
+            if(allRows.length > 0) {
+                usersTbody.innerHTML = allRows.join('');
+            } else {
+                usersTbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="px-6 py-10 text-center">
+                            <div class="flex flex-col items-center justify-center space-y-2 text-gray-500">
+                                <svg class="w-8 h-8 opacity-40 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                                <span class="text-sm font-medium text-gray-400">No active WebSocket connections or users right now</span>
+                                <span class="text-xs text-gray-500">When users log into the app, connect to order tracking WebSocket, or make requests, they will show here in real-time.</span>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }
+
+            // Recent Requests Table
+            const reqTbody = document.getElementById('table-recent-requests');
+            if(data.recent_requests && data.recent_requests.length > 0) {
+                reqTbody.innerHTML = data.recent_requests.map(r => `
+                    <tr class="hover:bg-gray-800/50 transition-colors group">
+                        <td class="px-4 py-3 text-gray-300 font-mono text-xs">${escapeHTML(r.time)}</td>
+                        <td class="px-4 py-3"><span class="px-2 py-0.5 rounded text-xs font-semibold ${getMethodColor(r.method)}">${escapeHTML(r.method)}</span></td>
+                        <td class="px-4 py-3 text-gray-200 truncate max-w-[200px]" title="${escapeHTML(r.path)}">${escapeHTML(r.path)}</td>
+                        <td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(r.status)}">${r.status}</span></td>
+                        <td class="px-4 py-3 text-gray-400 text-xs">${r.duration_ms ? r.duration_ms.toFixed(1) : '-'} ms</td>
+                        <td class="px-4 py-3 text-gray-500 font-mono text-xs">${escapeHTML(r.client_ip || '-')}</td>
+                    </tr>
+                `).join('');
+            } else {
+                reqTbody.innerHTML = '<tr><td colspan="6" class="px-4 py-6 text-center text-gray-500 text-sm">No recent requests</td></tr>';
+            }
+
+            // Recent Errors Table
+            const errTbody = document.getElementById('table-recent-errors');
+            document.getElementById('error-badge').textContent = `${data.error_count_5m || 0} in 5m`;
+            if(data.recent_errors && data.recent_errors.length > 0) {
+                errTbody.innerHTML = data.recent_errors.map(e => `
+                    <tr class="hover:bg-red-950/30 transition-colors bg-red-900/5">
+                        <td class="px-4 py-3 text-gray-300 font-mono text-xs">${escapeHTML(e.time)}</td>
+                        <td class="px-4 py-3 text-gray-200 truncate max-w-[150px]" title="${escapeHTML(e.path)}">${escapeHTML(e.path)}</td>
+                        <td class="px-4 py-3"><span class="text-red-400 font-mono text-xs">${escapeHTML(e.error_type)}</span></td>
+                        <td class="px-4 py-3 text-gray-400 text-xs truncate max-w-[200px]" title="${escapeHTML(e.message)}">${escapeHTML(e.message)}</td>
+                    </tr>
+                `).join('');
+            } else {
+                errTbody.innerHTML = '<tr><td colspan="4" class="px-4 py-6 text-center text-gray-500 text-sm">No recent errors</td></tr>';
+            }
+
+            // Top Endpoints
+            const topList = document.getElementById('list-top-endpoints');
+            if(data.top_endpoints && data.top_endpoints.length > 0) {
+                const maxCount = Math.max(...data.top_endpoints.map(e => e.count));
+                topList.innerHTML = data.top_endpoints.map(e => {
+                    const pct = Math.max(5, (e.count / maxCount) * 100);
+                    return `
+                    <div>
+                        <div class="flex justify-between items-center mb-1 text-sm">
+                            <span class="text-gray-200 truncate pr-2">${escapeHTML(e.path)}</span>
+                            <span class="text-gray-400 whitespace-nowrap">${e.count} reqs <span class="text-gray-600">|</span> ${e.avg_latency_ms ? e.avg_latency_ms.toFixed(0) : '-'}ms</span>
+                        </div>
+                        <div class="w-full bg-gray-800 rounded-full h-1.5">
+                            <div class="bg-indigo-500 h-1.5 rounded-full" style="width: ${pct}%"></div>
+                        </div>
+                    </div>
+                    `;
+                }).join('');
+            } else {
+                topList.innerHTML = '<div class="text-center text-gray-500 text-sm py-4">No endpoint data</div>';
+            }
+
+            // System Resources Bars
+            const cpu = data.cpu_percent || 0;
+            document.getElementById('bar-cpu-text').textContent = cpu.toFixed(1) + '%';
+            document.getElementById('bar-cpu-fill').style.width = Math.min(100, cpu) + '%';
+            if(cpu > 80) document.getElementById('bar-cpu-fill').className = "bg-red-500 h-2.5 rounded-full transition-all duration-500";
+            else document.getElementById('bar-cpu-fill').className = "bg-indigo-500 h-2.5 rounded-full transition-all duration-500";
+
+            const mem = data.memory_rss_mb || 0;
+            // Assuming 512MB is 100% for bar visualization scale
+            const memPct = Math.min(100, (mem / 512) * 100);
+            document.getElementById('bar-mem-text').textContent = mem.toFixed(1) + ' MB';
+            document.getElementById('bar-mem-fill').style.width = memPct + '%';
+            if(memPct > 80) document.getElementById('bar-mem-fill').className = "bg-red-500 h-2.5 rounded-full transition-all duration-500";
+            else document.getElementById('bar-mem-fill').className = "bg-purple-500 h-2.5 rounded-full transition-all duration-500";
+
+            const p99 = data.p99_ms || 0;
+            const p99Pct = Math.min(100, (p99 / 1000) * 100); // 1s max scale
+            document.getElementById('bar-p99-text').textContent = p99.toFixed(0) + ' ms';
+            document.getElementById('bar-p99-fill').style.width = p99Pct + '%';
+            if(p99 > 500) document.getElementById('bar-p99-fill').className = "bg-red-500 h-2.5 rounded-full transition-all duration-500";
+            else document.getElementById('bar-p99-fill').className = "bg-emerald-500 h-2.5 rounded-full transition-all duration-500";
+        }
+
+        function updateDownloads(logFiles) {
+            const tbody = document.getElementById('table-downloads');
+            if(logFiles && logFiles.length > 0) {
+                tbody.innerHTML = logFiles.map(f => `
+                    <tr class="hover:bg-gray-800/50 transition-colors group">
+                        <td class="px-6 py-4 flex items-center gap-3">
+                            <svg class="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            <span class="text-gray-200 font-medium">${escapeHTML(f.name)}</span>
+                        </td>
+                        <td class="px-6 py-4 text-gray-400 text-sm">${escapeHTML(f.size_human)}</td>
+                        <td class="px-6 py-4 text-gray-400 text-sm">${escapeHTML(f.modified)}</td>
+                        <td class="px-6 py-4 text-right">
+                            <a href="/api/download/${encodeURIComponent(f.name)}" class="inline-flex items-center gap-2 px-3 py-1.5 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 hover:text-indigo-300 rounded-lg text-sm font-medium transition-colors border border-indigo-500/20">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                                Download
+                            </a>
+                        </td>
+                    </tr>
+                `).join('');
+            } else {
+                tbody.innerHTML = '<tr><td colspan="4" class="px-6 py-8 text-center text-gray-500">No log files found</td></tr>';
+            }
+        }
+
+        // --- Logs Logic ---
+        let currentLogTab = 'behavior.log';
+        const logTabs = ['behavior.log', 'request.log', 'response.log', 'errors.log'];
+
+        function selectLogTab(tabName) {
+            currentLogTab = tabName;
+            logTabs.forEach(t => {
+                const btn = document.getElementById('tab-' + t);
+                if(t === tabName) {
+                    btn.className = 'px-4 py-2 text-sm font-medium rounded-md bg-gray-800 text-white shadow-sm transition-all';
+                } else {
+                    btn.className = 'px-4 py-2 text-sm font-medium rounded-md text-gray-400 hover:text-white hover:bg-gray-800/50 transition-all';
+                }
+            });
+            fetchLogs();
+        }
+
+        async function fetchLogs() {
+            if(!currentLogTab) return;
+            const viewer = document.getElementById('log-viewer');
+            
+            try {
+                const res = await fetch('/api/logs/' + encodeURIComponent(currentLogTab) + '?lines=100', { credentials: 'same-origin' });
+                if(res.status === 401) { window.location.href = '/login'; return; }
+                if(!res.ok) throw new Error('Failed to fetch logs');
+                
+                const data = await res.json();
+                if(data.lines && data.lines.length > 0) {
+                    viewer.innerHTML = data.lines.map(l => {
+                        let formatted = escapeHTML(l);
+                        try {
+                            const parsed = JSON.parse(l);
+                            formatted = `<span class="text-indigo-400">{</span> <span class="text-gray-300">${escapeHTML(JSON.stringify(parsed).slice(1, -1))}</span> <span class="text-indigo-400">}</span>`;
+                        } catch(e) {}
+                        return `<div class="hover:bg-gray-800/50 px-2 py-0.5 rounded">${formatted}</div>`;
+                    }).join('');
+                } else {
+                    viewer.innerHTML = '<div class="text-gray-500 italic p-2">File is empty</div>';
+                }
+                // Auto scroll to bottom
+                viewer.scrollTop = viewer.scrollHeight;
+            } catch(e) {
+                viewer.innerHTML = `<div class="text-red-400 p-2">Error loading logs: ${escapeHTML(e.message)}</div>`;
+            }
+        }
+
+        // Initialize
+        fetchStats();
+        setInterval(fetchStats, 5000);
+        setInterval(async () => {
+            // Health check specifically (if required separately)
+            try {
+                const res = await fetch('/api/health', { credentials: 'same-origin' });
+                if(res.status === 401) window.location.href = '/login';
+            } catch(e) {}
+        }, 10000);
+
+    </script>
+</body>
+</html>
